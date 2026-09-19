@@ -48,6 +48,11 @@ public sealed partial class AutoFate
         {
             Status = label;
 
+            // A 100% Collect FATE can pay out and clear while this route is already in progress. Settle that
+            // bookkeeping here without unwinding the current MoveOp; the old row disappearing must not make
+            // the state machine select this destination again and issue a replacement movement command.
+            RefreshPendingCollectReward();
+
             if (Environment.TickCount64 >= deadline) { stopReason = MoveStopReason.StuckTeleport; return true; }
             if (stopReason != MoveStopReason.None) return true;
 

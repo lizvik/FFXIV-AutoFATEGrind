@@ -124,6 +124,19 @@ public sealed partial class AutoFate
         if (FateScanner.AwaitsNpcStart(fate))
             await ActivateFate(fate);
 
+        // A completed Collect FATE can remain in CurrentFate during its reward window, then leave it briefly
+        // empty when the reward settles during travel. Remember that we physically reached this running FATE
+        // so the next state tick engages it instead of issuing the same move again in either transition.
+        var reached = PublicEvent.GetFateById(pickedId);
+        if (reached is { State: FateState.Running, Progress: < 100 }
+         && PublicEvent.CurrentFate?.Id != pickedId
+         && Svc.Objects.LocalPlayer is { } arrivedPlayer
+         && Vector3.Distance(arrivedPlayer.Position, reached.Position) <= reached.Radius)
+        {
+            arrivedFateId = pickedId;
+            Diag($"Reached FATE {pickedId} ({pickedName}) while CurrentFate is stale or empty; engaging without repeating movement");
+        }
+
         if (returnToFateId == fate.Id && fate.State == FateState.Running)
             returnToFateId = null;
 
@@ -132,9 +145,10 @@ public sealed partial class AutoFate
 
     private async Task<ExitReason> EngageCurrentFate()
     {
-        var fate = PublicEvent.CurrentFate;
+        var fate = ResolveEngagementFate(PublicEvent.CurrentFate);
         if (fate is null) return ExitReason.Continue;
         var fateId = fate.Id;
+        if (arrivedFateId == fateId) arrivedFateId = null;
 
         var preset = Plugin.Cfg.CombatPresetName;
         EnsureCombatPreset(preset);
@@ -551,9 +565,36 @@ public sealed partial class AutoFate
 
     private void AbandonFate(uint fateId)
     {
+        if (arrivedFateId == fateId) arrivedFateId = null;
         abandonedFateId = fateId;
         sessionStuckFateIds.Add(fateId);
         ClearEngageStall(fateId);
+    }
+
+    private PublicEvent? ResolveEngagementFate(PublicEvent? current)
+    {
+        // A 100% Collect row stays Running while it waits to pay out, but there is no combat left in it. Once
+        // it clears, CurrentFate can also be briefly empty. In every other case the game value is authoritative.
+        if (current is { State: FateState.Running }
+         && abandonedFateId != current.Id
+         && !(current.Rule == PublicEvent.FateRule.Collect && current.Progress >= 100))
+        {
+            if (arrivedFateId is { } arrivedId && arrivedId != current.Id)
+                arrivedFateId = null;
+            return current;
+        }
+
+        if (arrivedFateId is not { } fallbackId
+         || abandonedFateId == fallbackId
+         || PublicEvent.GetFateById(fallbackId) is not { State: FateState.Running, Progress: < 100 } fallback
+         || Svc.Objects.LocalPlayer is not { } player
+         || Vector3.Distance(player.Position, fallback.Position) > fallback.Radius)
+        {
+            arrivedFateId = null;
+            return null;
+        }
+
+        return fallback;
     }
 
     private static unsafe string DescribeEngageSituation(uint fateId, float reachMeters)

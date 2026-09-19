@@ -112,6 +112,7 @@ public sealed partial class AutoFate(IReadOnlyList<ZoneInfo> zones, AutoFateSess
     private int consecutiveZoneTeleportFailures;
 
     private uint? returnToFateId;          // FATE we died in; honor even if normal eligibility fails.
+    private uint? arrivedFateId;           // Reached while CurrentFate is stale/empty as a Collect reward settles.
     private uint? followUpFateId;
     private long  followUpWatchUntilMs;
     private long  zoneIdleSinceMs;
@@ -376,11 +377,12 @@ public sealed partial class AutoFate(IReadOnlyList<ZoneInfo> zones, AutoFateSess
             // fight in it, so the reward is tracked and the grind moves on to the next FATE in the zone.
             TrackCollectReward(current);
         }
-        else if (current is { State: FateState.Running } && abandonedFateId != current.Id)
+        var engagement = ResolveEngagementFate(current);
+        if (engagement is not null)
         {
-            if (current.Progress >= 100)
-                StartFollowUpWatch(current.Id);
-            else if (followUpFateId == current.Id)
+            if (engagement.Progress >= 100)
+                StartFollowUpWatch(engagement.Id);
+            else if (followUpFateId == engagement.Id)
                 followUpFateId = null;
             return GrindState.Engaging;
         }
