@@ -465,7 +465,7 @@
   "settings.repair.npcSetChat": "[AFG] Задан свой NPC для ремонта: {0} (территория {1}).",
   "settings.consumables.group": "Расходники",
   "settings.consumables.autoSummonChocobo": "Призывать чокобо",
-  "settings.consumables.autoSummonChocoboHelp": "Использовать Gysahl Greens между FATE вне боя, если спутник не призван. Требуется Gysahl Greens в инвентаре. Работает независимо от автоматического использования еды и лекарств.",
+  "settings.consumables.autoSummonChocoboHelp": "Использовать Gysahl Greens между FATE вне боя, если спутник не призван. Требуется Gysahl Greens в инвентаре.",
   "settings.consumables.autoConsume": "Автоматически есть и принимать медикаменты",
   "settings.consumables.autoConsumeHelp": "Использует еду и медикаменты между FATE, чтобы поддерживать их баффы; одна сытость дает бесплатные +3 % опыта. Предметы используются только вне боя и обновляются до истечения баффа.",
   "settings.consumables.autoConsumeOff": "Автоиспользование выключено. Включите его, чтобы выбрать предметы.",

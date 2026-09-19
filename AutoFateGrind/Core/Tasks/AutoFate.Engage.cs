@@ -222,14 +222,11 @@ public sealed partial class AutoFate
 
                 SyncToFate(fateId);
 
-                if (isCollect)
+                if (isCollect && await MaybeHandInCollectItems(fateId, fateName, preset))
                 {
                     // A hand-in trip is progress in its own right; give the stall clocks a fresh window after one.
-                    if (await MaybeHandInCollectItems(fateId, fateName, preset))
-                    {
-                        lastProgressAtMs = Environment.TickCount64;
-                        lastInCombatAtMs = Environment.TickCount64;
-                    }
+                    lastProgressAtMs = Environment.TickCount64;
+                    lastInCombatAtMs = Environment.TickCount64;
                 }
                 else if (await TickEngagementWatchdog(fateId, fate, idle))
                 {
@@ -322,26 +319,54 @@ public sealed partial class AutoFate
 
     private async Task<bool> TickEngagementWatchdog(uint fateId, PublicEvent fate, EngageIdleTracker idle)
     {
-        if (fate.Rule == PublicEvent.FateRule.Collect)
-        {
-            return false;
-        }
         if (Svc.Condition[ConditionFlag.Mounted])
         {
+            idle.ResetTargetRangeWatch();
             return false;
         }
         if (StuckDetector.IsPositionFrozenLegit())
         {
+            idle.ResetTargetRangeWatch();
             return false;
         }
         if (Svc.Objects.LocalPlayer is not { } player)
         {
+            idle.ResetTargetRangeWatch();
             return false;
         }
 
-        if (Svc.Condition[ConditionFlag.InCombat] && HasTargetInReach(fateId, idle.Meters))
+        if (FateMobScanner.TrySurveyTargetedMob(fateId, player.Position, out var target))
         {
-            idle.MarkInReach();
+            if (target.DistanceToHitbox <= idle.Meters)
+            {
+                idle.ResetTargetRangeWatch();
+                if (Svc.Condition[ConditionFlag.InCombat])
+                {
+                    idle.MarkInReach();
+                    return false;
+                }
+            }
+            else if (!idle.TargetOutOfRangeLongEnough(target.GameObjectId))
+            {
+                return false;
+            }
+            else
+            {
+                await RepositionToTargetedFateMob(fateId, fate.Name, target, idle);
+                idle.Restart();
+                Status = $"Engaging {fate.Name}";
+                return false;
+            }
+        }
+        else
+        {
+            idle.ResetTargetRangeWatch();
+        }
+
+        // Collect FATEs use their own pickup and hand-in movement, but still need the selected-target
+        // range correction above while fighting for materials.
+        if (fate.Rule == PublicEvent.FateRule.Collect)
+        {
             return false;
         }
 
@@ -379,6 +404,36 @@ public sealed partial class AutoFate
         => Svc.Objects.LocalPlayer is { } player
         && FateMobScanner.TryGetTargetedMob(fateId, player.Position, out var distance)
         && distance <= reachMeters;
+
+    private async Task RepositionToTargetedFateMob(uint fateId, string fateName, FateMobTarget target, EngageIdleTracker idle)
+    {
+        Status = $"Closing on {fateName}";
+        Diag($"Selected target for FATE {fateId} ({fateName}) remains {target.DistanceToHitbox:F0}m from its hitbox (attack reach {idle.Meters:F0}m); moving into range");
+
+        var targetId = target.GameObjectId;
+        var targetPosition = target.Position;
+        var dest = targetPosition.OnMesh();
+        var tolerance = target.HitboxRadius + (idle.Meters <= EngageMeleeReachMeters
+            ? EngageMeleeApproachToleranceMeters
+            : EngageRangedApproachToleranceMeters);
+        var config = MovementConfig.Default.WithTolerance(tolerance);
+        var reachMeters = idle.Meters;
+
+        bool InRangeMovedOrGone()
+        {
+            if (PublicEvent.GetFateById(fateId) is not { State: FateState.Running }
+             || Svc.Objects.LocalPlayer is not { } moving
+             || !FateMobScanner.TrySurveyTargetedMob(fateId, moving.Position, out var live)
+             || live.GameObjectId != targetId)
+            {
+                return true;
+            }
+            return live.DistanceToHitbox <= reachMeters
+                || Vector3.Distance(live.Position, targetPosition) >= EngageTargetRepathMeters;
+        }
+
+        await WalkWithBossModParked(dest, config, InRangeMovedOrGone, $"engage-target-{fateId}");
+    }
 
     private async Task RepositionToFateMob(uint fateId, string fateName, FateMobSurvey survey, EngageIdleTracker idle)
     {
@@ -555,6 +610,8 @@ public sealed partial class AutoFate
         private Vector3 anchor;
         private bool anchored;
         private long idleSinceMs;
+        private ulong watchedTargetId;
+        private long targetOutOfRangeSinceMs;
 
         public float Meters { get; } = reachMeters;
         public int Repositions { get; private set; }
@@ -577,7 +634,26 @@ public sealed partial class AutoFate
         public void MarkInReach()
         {
             Repositions = 0;
+            ResetTargetRangeWatch();
             Restart();
+        }
+
+        public bool TargetOutOfRangeLongEnough(ulong targetId)
+        {
+            var now = Environment.TickCount64;
+            if (watchedTargetId != targetId || targetOutOfRangeSinceMs == 0)
+            {
+                watchedTargetId = targetId;
+                targetOutOfRangeSinceMs = now;
+                return false;
+            }
+            return now - targetOutOfRangeSinceMs >= EngageTargetOutOfRangeGraceMs;
+        }
+
+        public void ResetTargetRangeWatch()
+        {
+            watchedTargetId = 0;
+            targetOutOfRangeSinceMs = 0;
         }
 
         public void Restart() => anchored = false;

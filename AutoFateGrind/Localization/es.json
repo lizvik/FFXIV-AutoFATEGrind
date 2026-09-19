@@ -465,7 +465,7 @@
   "settings.repair.npcSetChat": "[AFG] PNJ de reparación personalizado fijado: {0} (territorio {1}).",
   "settings.consumables.group": "Consumibles",
   "settings.consumables.autoSummonChocobo": "Invocar chocobo",
-  "settings.consumables.autoSummonChocoboHelp": "Usa verduras Gysahl entre FATEs, fuera de combate, si tu compañero no está invocado. Requiere verduras Gysahl en el inventario y funciona independientemente del consumo automático.",
+  "settings.consumables.autoSummonChocoboHelp": "Usa verduras Gysahl entre FATEs, fuera de combate, si tu compañero no está invocado. Requiere verduras Gysahl en el inventario.",
   "settings.consumables.autoConsume": "Consumir comida y medicina automáticamente",
   "settings.consumables.autoConsumeHelp": "Usa comida y medicina entre FATE para mantener sus efectos; Bien alimentado por sí solo es un +3 % de exp gratis. Los objetos solo se consumen fuera de combate y se renuevan antes de que expire el efecto.",
   "settings.consumables.autoConsumeOff": "El consumo automático está desactivado. Actívalo para elegir objetos.",

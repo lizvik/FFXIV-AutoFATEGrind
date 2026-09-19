@@ -3,14 +3,12 @@ using AutoFateGrind.Core.Game.Fates;
 using AutoFateGrind.Core.Game.Player;
 using AutoFateGrind.Core.Ipc;
 using AutoFateGrind.Core.Modes;
-using AutoFateGrind.Core.Trading;
 using AutoFateGrind.Core.Zones;
 using clib.Extensions;
 using clib.TaskSystem;
 using clib.Utils;
 using Dalamud.Game.ClientState.Conditions;
 using ECommons.DalamudServices;
-using FFXIVClientStructs.FFXIV.Client.Game;
 using FFXIVClientStructs.FFXIV.Client.Game.Fate;
 using System.Numerics;
 using System.Threading.Tasks;
@@ -124,7 +122,7 @@ public sealed partial class AutoFate
             return true;
         }
 
-        var op = new MoveOp(o => o.MoveInZone(dest, config, StopCondition));
+        var op = new MoveOp(o => o.MoveInZoneWithFlightRecovery(dest, config, StopCondition));
 
         var completed = await RunCancellable(op, MoveToFateWatchdogMs + MoveOpUnwindSlackMs, label, AbortIfFrozen);
         if (CancelToken.IsCancellationRequested) return MoveStopReason.None;
@@ -179,11 +177,7 @@ public sealed partial class AutoFate
         var flightFromAetheryte = Vector3.Distance(aetheryte.Position, fatePos);
         if (flightFromHere - flightFromAetheryte < TeleportShortcutMinSavingMeters) return;
         RefreshPendingCollectReward();
-        if (CollectRewardPending)
-        {
-            Diag($"Skipping the teleport shortcut to {aetheryte.Name} for FATE {fateId} ({fateName}): a same-zone teleport reloads the zone while Collect FATE {pendingRewardSpawn.FateId} ({pendingRewardName}) still owes its reward; flying instead");
-            return;
-        }
+        // Pending Collect rewards do not block shortcuts within the current territory.
 
         Status = $"Teleporting to {aetheryte.Name}";
         Diag($"Teleport shortcut for FATE {fateId} ({fateName}): {aetheryte.Name} leaves {flightFromAetheryte:F0}m to fly vs {flightFromHere:F0}m from here");

@@ -465,7 +465,7 @@
   "settings.repair.npcSetChat": "[AFG] NPC de reparo personalizado definido: {0} (território {1}).",
   "settings.consumables.group": "Consumíveis",
   "settings.consumables.autoSummonChocobo": "Invocar chocobo",
-  "settings.consumables.autoSummonChocoboHelp": "Usa Gysahl Greens entre FATEs, fora de combate, quando seu companheiro não estiver invocado. Requer Gysahl Greens no inventário e funciona independentemente do consumo automático.",
+  "settings.consumables.autoSummonChocoboHelp": "Usa Gysahl Greens entre FATEs, fora de combate, quando seu companheiro não estiver invocado. Requer Gysahl Greens no inventário.",
   "settings.consumables.autoConsume": "Consumir comida e remédio automaticamente",
   "settings.consumables.autoConsumeHelp": "Usa comida e remédio entre FATEs para manter os efeitos; só Bem Alimentado já é +3% de exp de graça. Os itens são consumidos apenas fora de combate e renovados antes do efeito acabar.",
   "settings.consumables.autoConsumeOff": "O consumo automático está desativado. Ative para escolher itens.",

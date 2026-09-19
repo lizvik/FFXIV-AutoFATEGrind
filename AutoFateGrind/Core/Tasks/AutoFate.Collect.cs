@@ -171,6 +171,10 @@ public sealed partial class AutoFate
                 {
                     return false;
                 }
+                // Passive AutoTarget stops selecting another enemy, but it does not clear the hostile
+                // target left over from collecting. Pin the hand-in NPC so the rotation cannot keep
+                // attacking that target and start another pull while we walk to the NPC.
+                NpcInteraction.Target(npc);
                 if (!await ApproachHandInNpc(fateId, npc, attempt))
                 {
                     continue;
@@ -179,6 +183,9 @@ public sealed partial class AutoFate
                 {
                     return false;
                 }
+                // Clearing chasers temporarily restores aggressive targeting. Select the NPC again
+                // before the dialog-ready wait so the trip cannot immediately acquire another mob.
+                NpcInteraction.Target(npc);
                 if (!await ReadyToHandIn(fateId))
                 {
                     continue;

@@ -524,7 +524,7 @@ internal static class L
 
         public static readonly LocString ConsumablesGroup = new("settings.consumables.group", "Consumables");
         public static readonly LocString AutoSummonChocobo = new("settings.consumables.autoSummonChocobo", "Summon chocobo");
-        public static readonly LocString AutoSummonChocoboHelp = new("settings.consumables.autoSummonChocoboHelp", "Use Gysahl Greens between FATEs when out of combat and your companion is not summoned. Requires Gysahl Greens in your inventory; works independently of auto-consume.");
+        public static readonly LocString AutoSummonChocoboHelp = new("settings.consumables.autoSummonChocoboHelp", "Use Gysahl Greens between FATEs when out of combat and your companion is not summoned. Requires Gysahl Greens in your inventory.");
         public static readonly LocString AutoConsume = new("settings.consumables.autoConsume", "Auto-consume food & medicine");
         public static readonly LocString AutoConsumeHelp = new("settings.consumables.autoConsumeHelp", "Use food and medicine between FATEs to keep their buffs up; Well Fed alone is a free +3% EXP. Items are consumed only when out of combat, and refreshed before the buff runs out.");
         public static readonly LocString AutoConsumeOff = new("settings.consumables.autoConsumeOff", "Auto-consume is off. Enable it to pick items.");

@@ -8,38 +8,26 @@ on:
 
 jobs:
 
-  # Cheap gates that don't need the SDK or Dalamud — run them first so a
-  # version-sync mistake fails fast without burning the full build.
+  # Cheap metadata and localization gates that don't need Dalamud.
   guards:
-    name: Guards (version sync)
+    name: Guards (metadata)
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Set up .NET
-        uses: actions/setup-dotnet@v6
-        with:
-          dotnet-version: '10.0.x'
-
-      - name: Verify version sync (Directory.Build.props ↔ repo.json)
+      - name: Verify version metadata
         shell: bash
         run: |
           build_ver=$(grep -oP '<Version>\K[\d.]+(?=</Version>)' Directory.Build.props)
-          assembly_ver=$(jq -r '.[0].AssemblyVersion' repo.json)
-          testing_ver=$(jq -r '.[0].TestingAssemblyVersion' repo.json)
           if [[ ! "$build_ver" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "::error::Directory.Build.props <Version> ($build_ver) must have four parts (Major.Minor.Build.Revision). The SDK pads the shipped manifest's AssemblyVersion to four parts and Dalamud refuses to install when repo.json differs."
+            echo "::error::Directory.Build.props <Version> ($build_ver) must have four parts (Major.Minor.Build.Revision)."
             exit 1
           fi
-          echo "Directory.Build.props <Version>      = $build_ver"
-          echo "repo.json AssemblyVersion           = $assembly_ver"
-          echo "repo.json TestingAssemblyVersion    = $testing_ver"
-          if [ "$build_ver" != "$assembly_ver" ] || [ "$build_ver" != "$testing_ver" ]; then
-            echo "::error::Version mismatch — Directory.Build.props ($build_ver), repo.json AssemblyVersion ($assembly_ver), TestingAssemblyVersion ($testing_ver) must all match."
-            exit 1
-          fi
+          jq empty repo.json
+          echo "Directory.Build.props <Version> = $build_ver"
+          echo "repo.json release metadata is updated by release.yml after publishing."
 
       # Every language catalog must carry exactly the keys of en.json, and the
       # copy rules ban em dashes in the string table and the catalogs.

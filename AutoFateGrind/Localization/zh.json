@@ -465,7 +465,7 @@
   "settings.repair.npcSetChat": "[AFG] 已设置自定义修理NPC：{0}（区域 {1}）。",
   "settings.consumables.group": "消耗品",
   "settings.consumables.autoSummonChocobo": "召唤陆行鸟",
-  "settings.consumables.autoSummonChocoboHelp": "在FATE间隙脱离战斗且未召唤搭档时，自动使用基萨尔野菜召唤陆行鸟。需要背包中有基萨尔野菜；此选项独立于自动使用食物和药品。",
+  "settings.consumables.autoSummonChocoboHelp": "在FATE间隙脱离战斗且未召唤搭档时，自动使用基萨尔野菜召唤陆行鸟。需要背包中有基萨尔野菜。",
   "settings.consumables.autoConsume": "自动使用食物和药品",
   "settings.consumables.autoConsumeHelp": "在FATE之间使用食物和药品以维持效果；仅饱食状态就是免费的 +3% 经验。只在非战斗状态使用，并在效果结束前刷新。",
   "settings.consumables.autoConsumeOff": "自动使用已关闭。开启后才能选择物品。",

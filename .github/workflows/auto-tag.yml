@@ -6,8 +6,7 @@ name: Auto-tag on version bump
 #
 # Bump <Version> in Directory.Build.props before (or inside) your PR and
 # you get a release automatically once it merges. Commit without a version
-# bump and nothing happens. CI also asserts repo.json's AssemblyVersion /
-# TestingAssemblyVersion match this value.
+# bump and nothing happens. release.yml updates repo.json after publishing.
 #
 # The tag is pushed with HUB_REPO_PAT (a PAT with contents:write on this repo)
 # rather than the default GITHUB_TOKEN: tags pushed by GITHUB_TOKEN do NOT

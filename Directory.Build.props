@@ -5,17 +5,16 @@
 
     The <Version> property is read by .github/workflows/auto-tag.yml on
     every push to master; if the parsed value has no matching v* tag the
-    workflow creates one and triggers release.yml. CI also asserts this
-    value matches repo.json (AssemblyVersion + TestingAssemblyVersion).
+    workflow creates one and triggers release.yml. After publishing,
+    release.yml updates repo.json's version and release metadata.
 
     The version MUST have four parts (Major.Minor.Build.Revision). The SDK
     stamps the shipped manifest from the assembly version, which .NET pads
-    to four parts, and Dalamud rejects the install when repo.json differs
-    ("distributed: 2.1.0.0 repo: 2.1.0").
+    to four parts.
   -->
 
   <PropertyGroup Label="Identity">
-    <Version>2.9.0.0</Version>
+    <Version>2.9.1.0</Version>
     <Authors>XeldarAlz</Authors>
     <Copyright>Copyright (c) XeldarAlz</Copyright>
     <PackageProjectUrl>https://github.com/XeldarAlz/FFXIV-AutoFATEGrind</PackageProjectUrl>
