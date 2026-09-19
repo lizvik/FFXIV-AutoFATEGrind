@@ -4,9 +4,9 @@ on:
   push:
     tags:
       - 'v*.*.*'
-  # Manual fallback: when auto-tag pushes a tag via GITHUB_TOKEN, GitHub
-  # sometimes refuses to cascade-trigger this workflow. Dispatch on the tag
-  # ref to publish the release without having to delete and re-push the tag.
+  # auto-tag.yml dispatches this workflow explicitly because tag pushes made
+  # with GITHUB_TOKEN do not cascade-trigger other workflows. This trigger also
+  # remains available for manual recovery without deleting and re-pushing tags.
   workflow_dispatch:
     inputs:
       tag:
@@ -102,10 +102,17 @@ jobs:
         shell: pwsh
         run: |
           $v = '${{ steps.tag.outputs.version }}'
+          $repository = '${{ github.repository }}'
+          $repositoryUrl = "https://github.com/$repository"
           $path = 'repo.json'
           $json = Get-Content -Raw -Path $path | ConvertFrom-Json
           $json[0].AssemblyVersion = $v
           $json[0].TestingAssemblyVersion = $v
+          $json[0].RepoUrl = $repositoryUrl
+          $json[0].IconUrl = "https://raw.githubusercontent.com/$repository/master/AutoFateGrind/Images/Icon.png"
+          $json[0].DownloadLinkInstall = "$repositoryUrl/releases/latest/download/latest.zip"
+          $json[0].DownloadLinkUpdate = "$repositoryUrl/releases/latest/download/latest.zip"
+          $json[0].DownloadLinkTesting = "$repositoryUrl/releases/latest/download/latest.zip"
           $json[0].DownloadCount = [int]'${{ steps.count.outputs.total }}'
           $json[0] | Add-Member -NotePropertyName 'LastUpdate' -NotePropertyValue ([string][int][double]::Parse((Get-Date -UFormat %s))) -Force
           # -AsArray preserves the array wrapper; piping a single-element array through | unrolls it and loses the [ ... ] Dalamud requires.
