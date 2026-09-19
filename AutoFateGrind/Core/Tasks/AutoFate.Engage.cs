@@ -346,7 +346,7 @@ public sealed partial class AutoFate
                     return false;
                 }
             }
-            else if (!idle.TargetOutOfRangeLongEnough(target.GameObjectId))
+            else if (!idle.TargetOutOfRangeLongEnough(target, player.Position))
             {
                 return false;
             }
@@ -612,6 +612,9 @@ public sealed partial class AutoFate
         private long idleSinceMs;
         private ulong watchedTargetId;
         private long targetOutOfRangeSinceMs;
+        private Vector3 targetRangePlayerAnchor;
+        private float targetRangeDistanceAnchor;
+        private long targetApproachSuppressedUntilMs;
 
         public float Meters { get; } = reachMeters;
         public int Repositions { get; private set; }
@@ -638,15 +641,50 @@ public sealed partial class AutoFate
             Restart();
         }
 
-        public bool TargetOutOfRangeLongEnough(ulong targetId)
+        public bool TargetOutOfRangeLongEnough(FateMobTarget target, Vector3 playerPosition)
         {
             var now = Environment.TickCount64;
-            if (watchedTargetId != targetId || targetOutOfRangeSinceMs == 0)
+            if (watchedTargetId != target.GameObjectId || targetOutOfRangeSinceMs == 0)
             {
-                watchedTargetId = targetId;
+                watchedTargetId = target.GameObjectId;
+                targetOutOfRangeSinceMs = now;
+                targetRangePlayerAnchor = playerPosition;
+                targetRangeDistanceAnchor = target.DistanceToHitbox;
+                targetApproachSuppressedUntilMs = target.IsCasting ? now + EngageTargetCastSettleMs : 0;
+                return false;
+            }
+
+            // A growing target distance while the player is moving is BossMod deliberately retreating (or a
+            // knockback), not a failed approach. Keep AFG's vnav correction out of the way until the mechanic
+            // resolves. Any movement also restarts the short approach grace so two movement controllers never
+            // fight each other while BossMod is already repositioning.
+            if (Vector3.Distance(targetRangePlayerAnchor, playerPosition) >= EngageTargetMovementSampleMeters)
+            {
+                if (target.DistanceToHitbox >= targetRangeDistanceAnchor + EngageTargetRetreatIncreaseMeters)
+                {
+                    targetApproachSuppressedUntilMs = Math.Max(targetApproachSuppressedUntilMs,
+                        now + EngageTargetRetreatHoldMs);
+                }
+
+                targetRangePlayerAnchor = playerPosition;
+                targetRangeDistanceAnchor = target.DistanceToHitbox;
+                targetOutOfRangeSinceMs = now;
+            }
+
+            // Most avoidable FATE mechanics are telegraphed by the selected mob's cast. Refreshing this on
+            // every tick keeps the approach blocked until shortly after that cast completes.
+            if (target.IsCasting)
+            {
+                targetApproachSuppressedUntilMs = Math.Max(targetApproachSuppressedUntilMs,
+                    now + EngageTargetCastSettleMs);
+            }
+
+            if (now < targetApproachSuppressedUntilMs)
+            {
                 targetOutOfRangeSinceMs = now;
                 return false;
             }
+
             return now - targetOutOfRangeSinceMs >= EngageTargetOutOfRangeGraceMs;
         }
 
@@ -654,6 +692,9 @@ public sealed partial class AutoFate
         {
             watchedTargetId = 0;
             targetOutOfRangeSinceMs = 0;
+            targetRangePlayerAnchor = default;
+            targetRangeDistanceAnchor = 0;
+            targetApproachSuppressedUntilMs = 0;
         }
 
         public void Restart() => anchored = false;

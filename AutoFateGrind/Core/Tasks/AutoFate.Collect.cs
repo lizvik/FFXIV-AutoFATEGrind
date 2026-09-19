@@ -20,6 +20,8 @@ public sealed partial class AutoFate
     private const string AutoTargetModule = "BossMod.Autorotation.MiscAI.AutoTarget";
     private const string AutoTargetGeneralTrack = "General";
     private const string AutoTargetPassiveOption = "Passive";
+    private const string AutoTargetCollectFateTrack = "CollectFATE";
+    private const string AutoTargetEnabledOption = "Enabled";
 
     private const int HandInWalkWatchdogMs = 40_000;
     private const int HandInCombatClearMs = 30_000;
@@ -345,10 +347,51 @@ public sealed partial class AutoFate
 
     private async Task WrapUpCollectFate(uint fateId, string fateName, string preset)
     {
+        await ClearCollectCompletionAggro(fateId, fateName, preset);
         await HandInLeftovers(fateId, fateName, preset);
         if (PublicEvent.GetFateById(fateId) is { } live && live.State is not (FateState.Ended or FateState.Failed))
         {
             TrackCollectReward(live);
+        }
+    }
+
+    // At 100%, stop pulling passive Collect mobs but keep the rotation active until everything already on
+    // the player's enmity list is dead. BossMod gives enmity-list actors normal priority independently of
+    // FATE targeting, while CollectFATE=Enabled suppresses only new passive Collect targets.
+    private async Task ClearCollectCompletionAggro(uint fateId, string fateName, string preset)
+    {
+        if (!Svc.Condition[ConditionFlag.InCombat])
+        {
+            return;
+        }
+
+        Status = $"Clearing aggro after {fateName}";
+        Diag($"Collect FATE {fateId} ({fateName}) reached 100% while still in combat; attacking enmity-list targets before hand-in or departure");
+
+        var restrictedToAggro = BossModIPC.Instance.AddTransientStrategy(
+            preset, AutoTargetModule, AutoTargetCollectFateTrack, AutoTargetEnabledOption);
+        var deadline = Environment.TickCount64 + HandInCombatClearMs;
+        try
+        {
+            while (Environment.TickCount64 < deadline)
+            {
+                if (CancelToken.IsCancellationRequested || IsPlayerKO() || !Svc.Condition[ConditionFlag.InCombat])
+                {
+                    return;
+                }
+
+                AssertPresetActive(preset);
+                await NextFrame(30);
+            }
+
+            Diag($"Collect FATE {fateId} ({fateName}) still has combat aggro after {HandInCombatClearMs / 1000}s; continuing wrap-up while the reward window remains open");
+        }
+        finally
+        {
+            if (restrictedToAggro)
+            {
+                BossModIPC.Instance.ClearTransientStrategy(preset, AutoTargetModule, AutoTargetCollectFateTrack);
+            }
         }
     }
 

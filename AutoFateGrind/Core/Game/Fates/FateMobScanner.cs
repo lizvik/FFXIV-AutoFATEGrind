@@ -23,7 +23,8 @@ internal readonly record struct FateMobTarget(
     ulong GameObjectId,
     Vector3 Position,
     float HitboxRadius,
-    float DistanceToHitbox);
+    float DistanceToHitbox,
+    bool IsCasting);
 
 internal static unsafe class FateMobScanner
 {
@@ -89,7 +90,7 @@ internal static unsafe class FateMobScanner
             return false;
         }
 
-        target = new FateMobTarget(npc.GameObjectId, npc.Position, npc.HitboxRadius, DistanceToHitbox(from, npc));
+        target = new FateMobTarget(npc.GameObjectId, npc.Position, npc.HitboxRadius, DistanceToHitbox(from, npc), npc.IsCasting);
         return true;
     }
 

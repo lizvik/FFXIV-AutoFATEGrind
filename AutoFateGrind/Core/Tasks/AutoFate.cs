@@ -51,6 +51,12 @@ public sealed partial class AutoFate(IReadOnlyList<ZoneInfo> zones, AutoFateSess
     // Give BossMod a brief chance to close normally, then use vnav when the selected FATE target remains
     // outside this job's attack range. This also catches movement that keeps heading to a stale fixed point.
     private const int   EngageTargetOutOfRangeGraceMs = 1_500;
+    // BossMod may deliberately move away from the selected target to resolve a mechanic. Do not let the
+    // range watchdog reverse that movement until the mechanic has had time to resolve.
+    private const int   EngageTargetRetreatHoldMs = 6_000;
+    private const int   EngageTargetCastSettleMs = 1_500;
+    private const float EngageTargetMovementSampleMeters = 0.75f;
+    private const float EngageTargetRetreatIncreaseMeters = 0.35f;
     private const float EngageTargetRepathMeters = 5f;
     private const int   EngageRepositionWatchdogMs = 40_000;
     private const float EngageMeleeApproachToleranceMeters  = 2.5f;
