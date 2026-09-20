@@ -35,15 +35,14 @@ public sealed partial class AutoFate
         await TryTeleportShortcut(fate.Position, targetId, fate.Name);
         if (CancelToken.IsCancellationRequested) return MoveStopReason.None;
 
-        var deadline = Environment.TickCount64 + MoveToFateWatchdogMs;
         var lastRetargetAtMs = Environment.TickCount64;
         var nextProgressLogMs = Environment.TickCount64 + MoveProgressLogMs;
         var stopReason = MoveStopReason.None;
 
-        // Graceful exits clib can observe while it is actively following a path: a deadline backstop,
-        // the FATE vanishing/finishing, its prep NPC spawning, or a closer FATE appearing. Returning
-        // true here lets clib's MoveTo stop vnav and unwind on its own. Physical "stuck" is handled by
-        // the abort tracker below, not here, so the two never race.
+        // Graceful exits clib can observe while it is actively following a path: the FATE
+        // vanishing/finishing, its prep NPC spawning, or a closer FATE appearing. Returning true here
+        // lets clib's MoveTo stop vnav and unwind on its own. Physical "stuck" is handled by the
+        // progress-aware abort tracker below, so a long but healthy flight is allowed to finish.
         bool StopCondition()
         {
             Status = label;
@@ -53,7 +52,6 @@ public sealed partial class AutoFate
             // the state machine select this destination again and issue a replacement movement command.
             RefreshPendingCollectReward();
 
-            if (Environment.TickCount64 >= deadline) { stopReason = MoveStopReason.StuckTeleport; return true; }
             if (stopReason != MoveStopReason.None) return true;
 
             var refreshed = PublicEvent.GetFateById(targetId);
@@ -129,7 +127,7 @@ public sealed partial class AutoFate
 
         var op = new MoveOp(o => o.MoveInZoneWithFlightRecovery(dest, config, StopCondition));
 
-        var completed = await RunCancellable(op, MoveToFateWatchdogMs + MoveOpUnwindSlackMs, label, AbortIfFrozen);
+        var completed = await RunCancellable(op, MoveToFateEmergencyTimeoutMs, label, AbortIfFrozen);
         if (CancelToken.IsCancellationRequested) return MoveStopReason.None;
 
         if (Svc.ClientState.TerritoryType != zone.TerritoryId)
@@ -140,8 +138,8 @@ public sealed partial class AutoFate
             return MoveStopReason.LeftZone;
         }
 
-        // Cancelled by the hard timeout while wedged in a phase clib wasn't polling (e.g. a mount loop):
-        // treat as a teleport-worthy stuck.
+        // The progress-aware abort catches normal navigation wedges quickly. Reaching this emergency
+        // timeout means the movement operation itself failed to unwind, so teleport recovery is warranted.
         if (!completed && stopReason == MoveStopReason.None)
             stopReason = MoveStopReason.StuckTeleport;
 
